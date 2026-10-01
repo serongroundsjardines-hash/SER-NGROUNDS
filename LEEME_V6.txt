@@ -1,0 +1,19 @@
+SERÓN GROUNDS V6
+
+Contenido:
+- index.html: aplicación V6 actualizada
+- manifest.json: configuración PWA
+- sw.js: caché V6, preparado para recibir futuras actualizaciones
+- logo.png: debe ser el logo original de SERÓN GROUNDS
+
+Para actualizar GitHub:
+1. Descomprime el ZIP.
+2. Sube index.html, manifest.json y sw.js sustituyendo los existentes.
+3. Sube también logo.png; este paquete ya incluye el logo que has enviado.
+
+
+V6 FINAL incluye también:
+- Avisos de facturas vencidas en Inicio y recordatorio por WhatsApp.
+- Próximos trabajos y mantenimientos recurrentes.
+- Resumen mensual de gastos por categorías.
+- Confirmación antes de eliminar elementos.
