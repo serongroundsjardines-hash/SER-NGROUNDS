@@ -240,6 +240,7 @@ function editDoc(t,i){
   let ci=clients.findIndex(c=>(c.nif&&d.client.nif&&c.nif===d.client.nif)||(c.name===d.client.name&&c.phone===d.client.phone));
   app.innerHTML=`<div class=card><h2>Editar ${t==='P'?'presupuesto':'factura'} · ${esc(d.no)}</h2>
   <div class=grid>
+    <label>Referencia / Nº de documento<input id=docno value="${esc(d.no||'')}" autocapitalize="characters"></label>
     <label>Fecha de emisión<input id=date type=date value="${d.date||''}"></label>
     ${t==='F'?`<label>Fecha límite de pago<input id=due type=date value="${d.due||plusDays(d.date||new Date().toISOString().slice(0,10),cfg.paymentDays||30)}"></label>`:''}
     <label>Cliente<select id=client><option value="">Seleccionar...</option>${clients.map((c,j)=>`<option value=${j} ${j===ci?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
@@ -262,6 +263,13 @@ function editDoc(t,i){
 function updateDoc(t,i){
   let ci=client.value;
   if(ci===''){alert('Selecciona un cliente.');return}
+  let newNo=(docno.value||'').trim().toUpperCase();
+  if(!newNo){alert('La referencia no puede quedar vacía.');docno.focus();return}
+  let k=t==='P'?'budgets':'invoices',x=S.get(k);
+  if(x.some((d,j)=>j!==i&&String(d.no||'').trim().toUpperCase()===newNo)){
+    alert('Ya existe otro '+(t==='P'?'presupuesto':'factura')+' con la referencia '+newNo+'. Elige otra referencia.');
+    docno.focus();return
+  }
   let c=S.get('clients')[+ci];
   let linesA=[...document.querySelectorAll('.docrow')].map(r=>({
     desc:r.querySelector('.desc').value,
@@ -272,10 +280,10 @@ function updateDoc(t,i){
     irpf:+r.querySelector('.lirpf').value||0
   })).filter(x=>x.desc);
   if(!linesA.length){alert('Añade al menos un concepto.');return}
-  let sums=calc(),k=t==='P'?'budgets':'invoices',x=S.get(k),old=x[i];
+  let sums=calc(),old=x[i];
   x[i]={
     ...old,
-    no:old.no,
+    no:newNo,
     date:date.value,
     due:t==='F'?due.value:'',
     client:c,
