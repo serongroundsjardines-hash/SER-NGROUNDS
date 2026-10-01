@@ -1,3 +1,25 @@
-SERÓN GROUNDS v2
-Incluye clientes, presupuestos, facturas, agenda, gastos, servicios, resumen, copias de seguridad, estados, pagos, firma y WhatsApp.
-No implementa por sí sola VeriFactu/AEAT.
+SERÓN GROUNDS V5 COMPLETA
+
+Archivos para GitHub Pages: index.html, logo.png, manifest.json y sw.js.
+Sube estos archivos sustituyendo los anteriores en la raíz del repositorio.
+
+Novedades principales V5:
+- Diseño verde vivo + verde claro + blanco.
+- Pantalla Hoy con trabajos y cobros vencidos.
+- Cobros parciales por porcentaje o importe.
+- Historial de pagos con fecha y forma de pago.
+- Estados Pendiente / Parcialmente pagada / Pagada / Vencida.
+- Total, pagado y pendiente en factura/PDF.
+- Facturas y presupuestos con diseño profesional verde.
+- Trabajo por horas/albaranes con jornadas, trabajadores, horas, materiales y desplazamiento.
+- Conversión de albarán a factura.
+- Firma, WhatsApp, agenda recurrente, jardines con fotos, partes, gastos, resumen, configuración y copias.
+
+Si el iPhone muestra la versión anterior, cierra la app y vuelve a abrirla. Si sigue igual, elimina el acceso de la pantalla de inicio y vuelve a añadirlo después de actualizar GitHub Pages.
+
+ACTUALIZACIÓN AGENDA CALENDARIO:
+- Vista mensual visual.
+- Tocar cualquier día para crear una cita o trabajo.
+- Categorías diferenciadas: trabajo, cita/visita, presupuesto y mantenimiento.
+- Hora, cliente/lugar, repetición y notas.
+- Botones para mes anterior/siguiente y volver a Hoy.
