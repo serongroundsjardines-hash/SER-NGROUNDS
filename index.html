@@ -78,6 +78,8 @@
     print-color-adjust:exact !important;
   }
 }
+
+.pdf-share{background:#eef9e9!important;border:1px solid #bfe4b5!important}
 </style></head><body><header><img src="logo.png"><div><b>SERÓN GROUNDS</b><div style="font-size:12px">Servicios Integrales de Jardinería</div></div></header><div class="wrap"><div class="tabs no-print" id="tabs"></div><main id="app"></main></div><script>
 const COMPANY={name:'SERÓN GROUNDS SERVICIOS INTEGRALES DE JARDINERÍA',owner:'Miguel Ángel Serón Rodríguez',nif:'77236704J',phone:'644 039 107',email:'Info@serongrounds.es',address:'Avenida Alcalde Antonio Solano, 29120 Alhaurín el Grande, Málaga'};
 const S={get(k,d=[]){return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))},set(k,v){localStorage.setItem(k,JSON.stringify(v))}};
@@ -128,7 +130,7 @@ function listDocs(t){
 function filterDocs(t){
  let k=t==='P'?'budgets':'invoices',x=S.get(k),q=(document.getElementById('docSearch')?.value||'').toLowerCase().trim(),box=document.getElementById('docList');
  let rows=x.map((d,i)=>({d,i})).filter(o=>!q||[o.d.no,o.d.client?.name,o.d.date,o.d.status].join(' ').toLowerCase().includes(q)).reverse();
- box.innerHTML=rows.length?rows.map(({d,i})=>`<div class=item><b>${d.no}</b> — ${esc(d.client?.name||'Sin cliente')}<div class=small>${d.date} · ${esc(d.status||'Pendiente')} · Total: ${(+d.total||0).toFixed(2)} €${t==='F'?' · '+invoiceState(d):''}</div><div class=actions no-print><button class=btn onclick="viewDoc('${t}',${i})">👁️ Vista previa</button><button class=btn onclick="editDoc('${t}',${i})">✏️ Editar</button><button class=btn onclick="duplicateDoc('${t}',${i})">📄 Duplicar</button><button class=btn onclick="shareWhatsApp('${t}',${i})">💬 WhatsApp</button>${t==='P'?`<button class=btn onclick="acceptBudget(${i})">✅ Aceptado</button><button class=btn onclick="toInvoice(${i})">🧾 Convertir en factura</button>`:`<button class="btn primary" onclick="addPayment(${i})">💶 Cobro</button>`}<button class=btn onclick="del('${k}',${i})">Eliminar</button></div></div>`).join(''):'No hay resultados.'
+ box.innerHTML=rows.length?rows.map(({d,i})=>`<div class=item><b>${d.no}</b> — ${esc(d.client?.name||'Sin cliente')}<div class=small>${d.date} · ${esc(d.status||'Pendiente')} · Total: ${(+d.total||0).toFixed(2)} €${t==='F'?' · '+invoiceState(d):''}</div><div class=actions no-print><button class=btn onclick="viewDoc('${t}',${i})">👁️ Vista previa</button><button class=btn onclick="editDoc('${t}',${i})">✏️ Editar</button><button class=btn onclick="duplicateDoc('${t}',${i})">📄 Duplicar</button><button class=btn onclick="shareWhatsApp('${t}',${i})">💬 WhatsApp</button>${t==='F'?`<button class="btn pdf-share" onclick="sharePDF('F',${i})">📄 PDF WhatsApp</button>`:''}${t==='P'?`<button class=btn onclick="acceptBudget(${i})">✅ Aceptado</button><button class=btn onclick="toInvoice(${i})">🧾 Convertir en factura</button>`:`<button class="btn primary" onclick="addPayment(${i})">💶 Cobro</button>`}<button class=btn onclick="del('${k}',${i})">Eliminar</button></div></div>`).join(''):'No hay resultados.'
 }
 
 function plusDays(d,n){let x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)}
