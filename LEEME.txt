@@ -1,0 +1,8 @@
+SERÓN GROUNDS - primera versión
+
+1. Abre index.html en un navegador para probar la aplicación.
+2. Los datos se guardan en el navegador/dispositivo (localStorage).
+3. Para instalarla como app y usarla correctamente como PWA, publícala en un alojamiento HTTPS gratuito (por ejemplo GitHub Pages, Cloudflare Pages o similar).
+4. Desde cada presupuesto/factura pulsa “Imprimir / Guardar PDF” y elige “Guardar como PDF”.
+
+IMPORTANTE: esta primera versión sirve para gestión y creación de documentos, pero no implementa por sí sola los requisitos técnicos/fiscales de VeriFactu ni el envío a la AEAT.
