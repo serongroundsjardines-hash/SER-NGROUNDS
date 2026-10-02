@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SERÓN GROUNDS · Portal trabajador</title>
+<style>
+:root{--g:#49b92f;--g2:#238a2f;--dark:#173f2a;--pale:#eef9e9;--bg:#f7fbf5;--mut:#5d6d5f;--red:#b42318}
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:#172018}
+header{background:linear-gradient(135deg,var(--dark),var(--g2));color:#fff;padding:14px 16px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:3}
+header img{width:100px;height:68px;object-fit:contain;background:#fff;border-radius:8px}.wrap{max-width:760px;margin:auto;padding:16px}
+.card{background:#fff;border:1px solid #e3f1df;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px #0000000b}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{font-size:13px;font-weight:700;color:var(--mut)}
+input,select{width:100%;padding:13px;border:1px solid #cfe3ca;border-radius:10px;margin-top:5px;font:inherit;background:#fff}.full{grid-column:1/-1}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.btn{border:0;border-radius:11px;padding:13px 15px;font-weight:800;font-size:15px;cursor:pointer}
+.primary{background:var(--g);color:#fff}.danger{background:#fee4e2;color:var(--red)}.secondary{background:#e8eee7}.small{font-size:13px;color:var(--mut)}
+.item{padding:11px 0;border-bottom:1px solid #edf0ed}.ok{background:var(--pale);padding:10px;border-radius:10px;margin:10px 0}
+#error{display:none;background:#fff1f0;color:#8a1c13;border:1px solid #f7c5c0;border-radius:10px;padding:10px;margin:10px 0;white-space:pre-wrap}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.full{grid-column:1}.actions .btn{flex:1 1 45%}}
+</style>
+</head>
+<body>
+<header><img src="logo.png" alt="SERÓN GROUNDS"><div><b>SERÓN GROUNDS</b><div style="font-size:12px">Portal del trabajador</div></div></header>
+<div class="wrap">
+ <div class="card">
+  <h2>📲 Fichaje</h2>
+  <div class="ok">☁️ Conectado con SERÓN GROUNDS</div>
+  <div id="error"></div>
+  <div class="grid">
+   <label>Trabajador
+    <select id="worker"><option value="">Cargando trabajadores…</option></select>
+   </label>
+   <label>Buscar jardín / trabajo
+    <input id="search" placeholder="Escribe el nombre...">
+   </label>
+   <label class="full">Jardín o trabajo
+    <select id="job"><option value="">Cargando trabajos…</option></select>
+   </label>
+  </div>
+  <div class="actions">
+   <button class="btn primary" id="clockIn">🟢 Fichar entrada</button>
+   <button class="btn danger" id="clockOut">🔴 Fichar salida</button>
+   <button class="btn secondary" id="reload">↻ Actualizar</button>
+  </div>
+ </div>
+ <div class="card">
+  <h3>Mis últimos fichajes</h3>
+  <div id="recent" class="small">Selecciona tu nombre.</div>
+ </div>
+</div>
+<script>
+const URL='https://vkateeqhqmjbjzicjmnz.supabase.co';
+const KEY='sb_publishable_qAVU4eC6uUeVsHkKPYm0Jw_cbC9TmXO';
+const H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json','Content-Type':'application/json'};
+let workers=[],jobs=[];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function err(m=''){ $('error').style.display=m?'block':'none'; $('error').textContent=m; }
+async function api(table,method='GET',query='',data=null){
+ const r=await fetch(URL+'/rest/v1/'+table+(query?'?'+query:''),{method,headers:{...H,Prefer:'return=representation'},body:data===null?undefined:JSON.stringify(data),cache:'no-store'});
+ const text=await r.text(); let body=[]; try{body=text?JSON.parse(text):[]}catch{body=text}
+ if(!r.ok) throw new Error((body&&body.message)||text||('HTTP '+r.status));
+ return body;
+}
+async function load(){
+ err('');
+ try{
+  [workers,jobs]=await Promise.all([
+   api('workers','GET','select=*&order=id.asc'),
+   api('jobs','GET','select=*&order=id.asc')
+  ]);
+  workers=workers.filter(x=>x.active!==false);
+  jobs=jobs.filter(x=>x.active!==false);
+  $('worker').innerHTML='<option value="">Seleccionar...</option>'+workers.map(x=>`<option value="${x.id}">${esc(x.name||('Trabajador '+x.id))}</option>`).join('');
+  drawJobs();
+  $('recent').textContent='Selecciona tu nombre.';
+ }catch(e){err('No se pudieron cargar los datos: '+e.message)}
+}
+function drawJobs(){
+ const q=$('search').value.trim().toLowerCase();
+ const list=jobs.filter(x=>!q||String((x.name||'')+' '+(x.address||'')+' '+(x.type||x.kind||'')).toLowerCase().includes(q));
+ $('job').innerHTML='<option value="">Seleccionar...</option>'+list.map(x=>`<option value="${x.id}">${esc(x.name||('Trabajo '+x.id))}${x.type?' · '+esc(x.type):''}${x.address?' · '+esc(x.address):''}</option>`).join('');
+}
+async function inClick(){
+ err('');
+ const wid=Number($('worker').value),jid=Number($('job').value);
+ if(!wid||!jid)return alert('Selecciona trabajador y jardín/trabajo.');
+ try{
+  const open=await api('clockings','GET',`worker_id=eq.${wid}&exit_time=is.null&select=*&order=created_at.desc`);
+  if(open.length)return alert('Ya tienes un fichaje abierto. Primero ficha la salida.');
+  await api('clockings','POST','',{worker_id:wid,job_id:jid,entry_time:new Date().toISOString(),exit_time:null});
+  alert('Entrada registrada correctamente.');
+  await showRecent();
+ }catch(e){err('No se pudo fichar la entrada: '+e.message)}
+}
+async function outClick(){
+ err('');
+ const wid=Number($('worker').value);
+ if(!wid)return alert('Selecciona el trabajador.');
+ try{
+  const open=await api('clockings','GET',`worker_id=eq.${wid}&exit_time=is.null&select=*&order=created_at.desc&limit=1`);
+  if(!open.length)return alert('No tienes ningún fichaje abierto.');
+  await api('clockings','PATCH',`id=eq.${encodeURIComponent(open[0].id)}`,{exit_time:new Date().toISOString()});
+  alert('Salida registrada correctamente.');
+  await showRecent();
+ }catch(e){err('No se pudo fichar la salida: '+e.message)}
+}
+function fmt(v){if(!v)return '—';try{return new Date(v).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'})}catch{return v}}
+async function showRecent(){
+ const wid=Number($('worker').value);
+ if(!wid){$('recent').textContent='Selecciona tu nombre.';return}
+ try{
+  const rows=await api('clockings','GET',`worker_id=eq.${wid}&select=*&order=created_at.desc&limit=10`);
+  $('recent').innerHTML=rows.length?rows.map(r=>{
+   const j=jobs.find(x=>Number(x.id)===Number(r.job_id));
+   return `<div class="item"><b>${esc(j?.name||('Trabajo '+r.job_id))}</b><div class="small">Entrada: ${esc(fmt(r.entry_time))}<br>Salida: ${r.exit_time?esc(fmt(r.exit_time)):'🟢 En curso'}</div></div>`
+  }).join(''):'Todavía no hay fichajes.';
+ }catch(e){err('No se pudieron cargar los fichajes: '+e.message)}
+}
+$('search').addEventListener('input',drawJobs);
+$('worker').addEventListener('change',showRecent);
+$('clockIn').addEventListener('click',inClick);
+$('clockOut').addEventListener('click',outClick);
+$('reload').addEventListener('click',load);
+load();
+</script>
+</body></html>
