@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SERÓN GROUNDS · Trabajador</title>
+<style>
+:root{--g:#49b92f;--g2:#238a2f;--dark:#173f2a;--pale:#eef9e9;--bg:#f7fbf5;--mut:#5d6d5f}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:#172018}header{background:linear-gradient(135deg,var(--dark),var(--g2));color:#fff;padding:14px 16px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:3}header img{width:105px;height:72px;object-fit:contain;background:#fff;border-radius:8px}.wrap{max-width:760px;margin:auto;padding:16px}.card{background:#fff;border:1px solid #e3f1df;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px #0000000b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{font-size:13px;font-weight:700;color:var(--mut)}input,textarea,select{width:100%;padding:12px;border:1px solid #cfe3ca;border-radius:9px;margin-top:5px;font:inherit}textarea{min-height:90px}.full{grid-column:1/-1}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{border:0;border-radius:10px;padding:12px 14px;background:#e2e8e1;font-weight:800}.btn.primary{background:var(--g);color:#fff}.item{padding:11px 0;border-bottom:1px solid #edf0ed}.small{font-size:13px;color:var(--mut)}.badge{display:inline-block;padding:5px 8px;border-radius:8px;background:var(--pale);margin-bottom:10px}@media(max-width:650px){.grid{grid-template-columns:1fr}.full{grid-column:1}.actions .btn{flex:1 1 45%}}
+</style></head><body>
+<header><img src="logo.png" alt="SERÓN GROUNDS"><div><b>SERÓN GROUNDS</b><div style="font-size:12px">Portal del trabajador</div></div></header>
+<div class="wrap"><main id="app"><div class="card">Conectando…</div></main></div>
+<script>
+const SUPABASE_URL='https://vkateeqhqmjbjzicjmnz.supabase.co';
+const SUPABASE_KEY='sb_publishable_qAVU4eC6uUeVsHkKPYm0Jw_cbC9TmXO';
+const S={get(k,d=[]){try{return JSON.parse(localStorage.getItem('worker_'+k)||JSON.stringify(d))}catch{return d}},set(k,v){localStorage.setItem('worker_'+k,JSON.stringify(v))}};
+const esc=(s='')=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function req(key,method='GET',data=null){const url=SUPABASE_URL+'/rest/v1/seron_data?key=eq.'+encodeURIComponent(key);const opt={method,headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'}};if(data!==null)opt.body=JSON.stringify(data);const r=await fetch(url,opt);if(!r.ok)throw new Error(await r.text());return r.status===204?[]:await r.json()}
+async function load(key){let rows=await req(key);let v=rows?.[0]?.data;if(Array.isArray(v)){S.set(key,v);return v}return S.get(key)}
+async function save(key,value){S.set(key,value);let rows=await req(key);if(rows?.length)await req(key,'PATCH',{data:value,updated_at:new Date().toISOString()});else{let r=await fetch(SUPABASE_URL+'/rest/v1/seron_data',{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({key,data:value})});if(!r.ok)throw new Error(await r.text())}}
+async function apiTest(table){
+  const url=SUPABASE_URL+'/rest/v1/'+table+'?select=*';
+  try{
+    const r=await fetch(url,{
+      method:'GET',
+      headers:{
+        'apikey':SUPABASE_KEY,
+        'Authorization':'Bearer '+SUPABASE_KEY,
+        'Accept':'application/json'
+      },
+      cache:'no-store'
+    });
+    const body=await r.text();
+    let parsed=null;
+    try{parsed=JSON.parse(body)}catch{}
+    return {table,status:r.status,ok:r.ok,body,parsed};
+  }catch(e){
+    return {table,status:0,ok:false,body:String(e),parsed:null};
+  }
+}
+async function refresh(){
+  const [w,j]=await Promise.all([apiTest('workers'),apiTest('jobs')]);
+  window.__diag={w,j};
+  if(w.ok && Array.isArray(w.parsed)){
+    S.set('workers',w.parsed.map(x=>({
+      id:String(x.id),name:x.name||'',phone:x.phone||'',
+      start:x.start_date||'',end:x.end_date||'',
+      active:x.active!==false,notes:x.notes||''
+    })));
+  }
+  if(j.ok && Array.isArray(j.parsed)){
+    S.set('apiJobs',j.parsed.map(x=>({
+      id:'J'+String(x.id),name:x.name||'',
+      address:x.address||'',kind:x.type||x.kind||'Trabajo',
+      active:x.active!==false
+    })));
+  }
+}
+function jobs(){return S.get('apiJobs',[]).filter(x=>x.active!==false)}
+
+function duration(c){if(!c.inTime||!c.outTime)return 'En curso';let a=new Date(c.date+'T'+c.inTime),b=new Date(c.date+'T'+c.outTime),m=Math.max(0,Math.round((b-a)/60000));return `${Math.floor(m/60)} h ${m%60} min`}
+function selectedJob(){return jobs().find(j=>j.id===pjob.value)}
+function render(){let ws=S.get('workers').filter(w=>w.active),js=jobs();let d=window.__diag||{},dw=d.w||{},dj=d.j||{};
+let diag=`<div class=card style="border:2px solid #d9a400"><h3>🔎 Diagnóstico Supabase</h3>
+<div><b>workers:</b> ${dw.ok?'✅ OK':'❌ ERROR'} · HTTP ${dw.status??'—'}</div>
+<div class=small style="word-break:break-word">${esc(dw.ok?('Filas recibidas: '+(Array.isArray(dw.parsed)?dw.parsed.length:0)):String(dw.body||''))}</div>
+<div style="margin-top:10px"><b>jobs:</b> ${dj.ok?'✅ OK':'❌ ERROR'} · HTTP ${dj.status??'—'}</div>
+<div class=small style="word-break:break-word">${esc(dj.ok?('Filas recibidas: '+(Array.isArray(dj.parsed)?dj.parsed.length:0)):String(dj.body||''))}</div>
+</div>`;
+app.innerHTML=diag+`<div class=card><h2>📲 Portal del trabajador</h2><span class=badge>☁️ Conectado con SERÓN GROUNDS</span> <button class=btn id=breload style="padding:7px 10px">🔄 Actualizar</button><div class=grid><label>Trabajador<select id=pworker><option value="">Seleccionar...</option>${ws.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select></label><label>Buscar jardín / trabajo<input id=psearch placeholder="Escribe el nombre..."></label><label class=full>Jardín o trabajo<select id=pjob><option value="">Seleccionar...</option>${js.map(j=>`<option value="${j.id}" data-search="${esc((j.name+' '+j.address+' '+j.kind).toLowerCase())}">${esc(j.name)} · ${esc(j.kind)}${j.address?' · '+esc(j.address):''}</option>`).join('')}</select></label></div><div class=actions><button class="btn primary" id=bin>🟢 Fichar entrada</button><button class=btn id=bout>🔴 Fichar salida</button><button class=btn id=bteam>👥 Equipo</button></div><div id=team></div></div><div class=card><h3>Trabajo / incidencia</h3><div class=grid><label>Resultado<select id=presult><option>Trabajo terminado</option><option>Queda trabajo pendiente</option><option>Incidencia</option><option>Falta material</option></select></label><label class=full>Trabajo realizado / qué falta<textarea id=pnotes placeholder="Explica qué se ha hecho o qué queda pendiente..."></textarea></label><label class=full>Fotos<input id=pphotos type=file accept="image/*" multiple></label></div><div class=actions><button class="btn primary" id=bsave>📸 Guardar y enviar</button></div></div><div class=card><h3>Mis últimos registros</h3><div id=recent class=small>Selecciona tu nombre para verlos.</div></div>`;
+breload.onclick=async()=>{breload.disabled=true;breload.textContent='Actualizando…';await refresh();render()};psearch.oninput=()=>{let q=psearch.value.toLowerCase();[...pjob.options].forEach((o,i)=>{if(i)o.hidden=q&&!String(o.dataset.search||'').includes(q)})};pworker.onchange=showRecent;bin.onclick=clockIn;bout.onclick=clockOut;bteam.onclick=showTeam;bsave.onclick=saveIncident}
+async function clockIn(){if(!pworker.value||!pjob.value)return alert('Selecciona trabajador y jardín/trabajo.');await load('clockings');let x=S.get('clockings');let open=x.find(c=>c.workerId===pworker.value&&!c.outTime);if(open)return alert('Ya tienes un fichaje abierto en '+open.jobName+'. Primero ficha la salida.');let j=selectedJob(),now=new Date();x.push({id:'C'+Date.now(),workerId:pworker.value,jobId:j.id,jobName:j.name,jobKind:j.kind,date:now.toLocaleDateString('sv-SE'),inTime:now.toTimeString().slice(0,5),outTime:''});await save('clockings',x);alert('Entrada registrada: '+j.name);showRecent();showTeam()}
+async function clockOut(){if(!pworker.value)return alert('Selecciona el trabajador.');await load('clockings');let x=S.get('clockings'),i=-1;for(let n=x.length-1;n>=0;n--)if(x[n].workerId===pworker.value&&!x[n].outTime){i=n;break}if(i<0)return alert('No tienes ningún fichaje abierto.');x[i].outTime=new Date().toTimeString().slice(0,5);await save('clockings',x);alert('Salida registrada. '+duration(x[i]));showRecent();if(pjob.value===x[i].jobId)showTeam()}
+function showTeam(){if(!pjob.value)return alert('Selecciona primero un jardín o trabajo.');let j=selectedJob(),ws=S.get('workers'),today=new Date().toLocaleDateString('sv-SE'),cl=S.get('clockings').filter(c=>c.jobId===j.id&&c.date===today),name=id=>esc(ws.find(w=>w.id===id)?.name||'Trabajador');team.innerHTML=`<div style="margin-top:12px;background:var(--pale);padding:12px;border-radius:12px"><b>👥 Equipo hoy · ${esc(j.name)}</b>${cl.filter(c=>!c.outTime).length?'':`<p class=small>No hay trabajadores fichados ahora mismo.</p>`}${cl.map(c=>`<div class=item>${c.outTime?'⚪':'🟢'} <b>${name(c.workerId)}</b><div class=small>${c.inTime} → ${c.outTime||'En curso'} · ${duration(c)}</div></div>`).join('')}</div>`}
+async function saveIncident(){if(!pworker.value||!pjob.value)return alert('Selecciona trabajador y jardín/trabajo.');if(!pnotes.value.trim()&&!pphotos.files.length)return alert('Escribe qué se ha realizado, qué falta o añade una foto.');let files=[...pphotos.files].slice(0,4),photos=[];let finish=async()=>{await load('workerIncidents');let j=selectedJob(),x=S.get('workerIncidents');x.push({id:'I'+Date.now(),workerId:pworker.value,jobId:j.id,jobName:j.name,jobKind:j.kind,date:new Date().toISOString(),result:presult.value,notes:pnotes.value.trim(),photos,status:'Nueva'});await save('workerIncidents',x);alert('Registro enviado correctamente.');render()};if(!files.length)return finish();let left=files.length;files.forEach(f=>{let r=new FileReader;r.onload=()=>{photos.push(r.result);if(!--left)finish()};r.readAsDataURL(f)})}
+function incidentHtml(r){return `<div class=item><b>${new Date(r.date).toLocaleString('es-ES')} · ${esc(r.jobName)}</b><div>${esc(r.result)}</div><div class=small>${esc(r.notes||'')}</div>${(r.photos||[]).map(p=>`<img src="${p}" style="width:90px;height:90px;object-fit:cover;border-radius:9px;margin:6px">`).join('')}</div>`}
+function showRecent(){let id=pworker.value,cl=S.get('clockings').filter(c=>c.workerId===id).slice(-5).reverse(),inc=S.get('workerIncidents').filter(c=>c.workerId===id).slice(-5).reverse();recent.innerHTML=(cl.map(c=>`<div class=item>⏱️ ${c.date} · ${esc(c.jobName)} · ${c.inTime||'—'} → ${c.outTime||'En curso'} · ${duration(c)}</div>`).join('')+inc.map(incidentHtml).join(''))||'Todavía no hay registros.'}
+refresh().then(render).catch(e=>{app.innerHTML='<div class="card"><h2>Sin conexión</h2><p>No se ha podido conectar con SERÓN GROUNDS. Comprueba Internet y vuelve a cargar.</p></div>';console.error(e)});
+</script></body></html>
