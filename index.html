@@ -338,7 +338,7 @@ async function cloudRequest(key,method='GET',data=null){
   const r=await fetch(url,opt); if(!r.ok)throw new Error(await r.text()); return r.status===204?[]:await r.json();
 }
 async function cloudLoad(key){try{let rows=await cloudRequest(key);if(rows&&rows[0]&&Array.isArray(rows[0].data)){S.set(key,rows[0].data);return rows[0].data}}catch(e){console.warn('Nube no disponible',key,e)}return S.get(key)}
-async function cloudSave(key,value){S.set(key,value);try{let rows=await cloudRequest(key);if(rows&&rows.length)await cloudRequest(key,'PATCH',{data:value,updated_at:new Date().toISOString()});else await fetch(SUPABASE_URL+'/rest/v1/seron_data',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({key,data:value})});return true}catch(e){console.warn('Guardado local; nube pendiente',e);return false}}
+async function cloudSave(key,value){S.set(key,value);try{let rows=await cloudRequest(key);if(rows&&rows.length)await cloudRequest(key,'PATCH',{data:value,updated_at:new Date().toISOString()});else{let r=await fetch(SUPABASE_URL+'/rest/v1/seron_data',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({key,data:value})});if(!r.ok)throw new Error(await r.text())}return true}catch(e){console.warn('Guardado local; nube pendiente',e);return false}}
 async function cloudRefresh(){await Promise.all(CLOUD_KEYS.map(cloudLoad));}
 function cloudBadge(ok=true){return `<span class=small style="display:inline-block;padding:5px 8px;border-radius:8px;background:${ok?'#eef9e9':'#fff1c9'}">${ok?'☁️ Datos sincronizados':'📱 Modo local'}</span>`}
 
@@ -361,6 +361,6 @@ async function saveWorkerIncident(){if(!pworker.value||!pjob.value){alert('Selec
 function workerIncidentHtml(r){return `<div class=item><b>${new Date(r.date).toLocaleString('es-ES')} · ${esc(r.jobName)}</b><div>${esc(r.result)} · <b>${esc(r.status||'Nueva')}</b></div><div class=small>${esc(r.notes||'')}</div>${(r.photos||[]).map(p=>`<img src="${p}" style="width:90px;height:90px;object-fit:cover;border-radius:9px;margin:6px">`).join('')}</div>`}
 function showWorkerRecent(){let id=pworker.value,cl=S.get('clockings').filter(c=>c.workerId===id).slice(-5).reverse(),inc=S.get('workerIncidents').filter(c=>c.workerId===id).slice(-5).reverse();workerRecent.innerHTML=(cl.map(c=>`<div class=item>⏱️ ${c.date} · ${esc(c.jobName)} · ${c.inTime||'—'} → ${c.outTime||'En curso'} · ${clockDuration(c)}</div>`).join('')+inc.map(workerIncidentHtml).join(''))||'Todavía no hay registros.'}
 
-async function seedGardensCloud(){try{let rows=await cloudRequest('gardens');if((!rows||!rows.length)&&S.get('gardens').length)await cloudSave('gardens',S.get('gardens'))}catch(e){console.warn('No se pudo sincronizar jardines',e)}}
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});seedGardensCloud().finally(()=>cloudRefresh().finally(()=>{tabs();render()}));
+async function seedLocalCloud(){for(const key of CLOUD_KEYS){try{let rows=await cloudRequest(key);let local=S.get(key);if((!rows||!rows.length)&&Array.isArray(local)&&local.length)await cloudSave(key,local)}catch(e){console.warn('No se pudo sincronizar',key,e)}}}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});seedLocalCloud().finally(()=>cloudRefresh().finally(()=>{tabs();render()}));
 </script></body></html>
