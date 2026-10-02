@@ -1,0 +1,14 @@
+SERÓN GROUNDS · CORRECCIÓN TABLA JOBS
+
+Este archivo corrige el error:
+Could not find the 'type' column of 'jobs' in the schema cache
+
+En Supabase:
+1. SQL Editor
+2. New query
+3. Abre/copia el contenido de SERON_SUPABASE_JOBS.sql
+4. Run
+
+Resultado esperado: Success. No rows returned.
+
+No elimina los trabajos existentes.
