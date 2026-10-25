@@ -270,20 +270,10 @@ let page='Inicio'; const pages=['Inicio','Hoy','Clientes','Jardines','Trabajador
 const CFG=()=>S.get('settings',{iban:'',bic:'',bankOwner:'Miguel Ángel Serón Rodríguez',defaultVat:21,defaultIrpf:0,defaultHourly:30,paymentDays:30});
 function tabs(){document.getElementById('tabs').innerHTML=pages.map(p=>`<button class="${p===page?'active':''}" onclick="go('${p}')">${p}</button>`).join('')}
 function go(p){page=p;tabs();render()}; function esc(s=''){return String(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-function nextNo(type){let y=new Date().getFullYear(),cfg=CFG(),prefix=type==='P'?(cfg.budgetPrefix||'P'):(cfg.invoicePrefix||'F'),key=type==='P'?'budgets':'invoices',arr=S.get(key),nums=arr.map(x=>String(x.no||'')).filter(n=>new RegExp('^'+prefix+'-'+y+'-[0-9]+$').test(n)).map(n=>Number(n.split('-').pop())).filter(Number.isFinite);return `${prefix}-${y}-${String(Math.max(0,...nums)+1).padStart(3,'0')}`}
+function nextNo(type){let y=new Date().getFullYear(),cfg=CFG(),prefix=type==='P'?(cfg.budgetPrefix||'P'):(cfg.invoicePrefix||'F'),key=type==='P'?'budgets':'invoices',arr=S.get(key),nums=arr.filter(x=>x.no?.startsWith(prefix+'-'+y+'-')).map(x=>+x.no.split('-').pop());return `${prefix}-${y}-${String(Math.max(0,...nums)+1).padStart(3,'0')}`}
 function render(){let a=document.getElementById('app'); if(page==='Inicio') a.innerHTML=`<div class=card><h2>Panel principal</h2><div class=home><button class="btn primary" onclick="newDoc('P')">＋ Nuevo presupuesto</button><button class="btn primary" onclick="newDoc('F')">＋ Nueva factura</button><button class=btn onclick="go('Hoy')">☀️ Hoy</button><button class=btn onclick="go('Clientes')">👤 Clientes</button><button class=btn onclick="go('Jardines')">🏡 Jardines</button><button class=btn onclick="go('Trabajadores')">👷 Trabajadores</button><button class=btn onclick="go('Trabajos')">🛠️ Trabajos</button><button class=btn onclick="go('Portal trabajador')">📲 Portal trabajador</button><button class=btn onclick="go('🌴 Palmeras')">🌴 Tratamientos palmeras</button><button class=btn onclick="go('Servicios')">🌿 Servicios</button><button class=btn onclick="go('Agenda')">📅 Agenda</button><button class=btn onclick="go('📝 Notas')">📝 Notas</button><button class=btn onclick="go('Partes')">📝 Partes</button><button class=btn onclick="go('Por horas')">⏱️ Por horas</button><button class=btn onclick="go('Gastos')">💶 Gastos</button><button class=btn onclick="go('Resumen')">📊 Resumen</button><button class=btn onclick="go('Finanzas')">📈 Finanzas mes</button><button class=btn onclick="go('Configuración')">⚙️ Configuración</button><button class=btn onclick="go('Recurrentes')">🔁 Recurrentes</button><button class=btn onclick="go('Copias')">💾 Copias</button></div></div><div class=card><b>${COMPANY.owner}</b><div class=small>${COMPANY.nif} · ${COMPANY.phone}<br>${COMPANY.email}<br>${COMPANY.address}</div></div>${homeAlerts()}`; else if(page==='Hoy') todayPage(); else if(page==='Clientes') clients(); else if(page==='Jardines') gardens(); else if(page==='Trabajadores') workersAdmin(); else if(page==='Trabajos') sporadicJobsAdmin(); else if(page==='Portal trabajador') workerPortal(); else if(page==='🌴 Palmeras') palmTreatments(); else if(page==='Partes') workReports(); else if(page==='Por horas') hourlyJobs(); else if(page==='Configuración') settings(); else if(page==='Servicios') services(); else if(page==='Agenda') agenda(); else if(page==='📝 Notas') notesPage(); else if(page==='Gastos') expenses(); else if(page==='Resumen') summary(); else if(page==='Finanzas') monthlyFinance(); else if(page==='Copias') backups(); else if(page==='Recurrentes') recurringJobs(); else listDocs(page==='Presupuestos'?'P':'F')}
 
 
-function todayPage(){
- const today=new Date().toLocaleDateString('sv-SE');
- const agendaItems=S.get('agenda',[]).filter(x=>x.date===today);
- const recurringItems=S.get('recurringJobs',[]).filter(x=>x.next===today);
- const palmItems=S.get('palmTreatments',[]).filter(x=>x.nextDate===today);
- app.innerHTML=`<div class="card"><h2>☀️ Hoy · ${esc(today)}</h2><p class="small">Resumen de las tareas previstas para hoy.</p></div>
- <div class="card"><h3>📅 Agenda</h3>${agendaItems.length?agendaItems.map(x=>`<div class="item"><b>${esc(x.time||'')} ${esc(x.client||'')}</b><div class="small">${esc(x.type||'')} · ${esc(x.notes||'')}</div></div>`).join(''):'<p class="small">No hay citas para hoy.</p>'}</div>
- <div class="card"><h3>🔁 Mantenimientos</h3>${recurringItems.length?recurringItems.map(x=>`<div class="item"><b>${esc(x.client?.name||'')}</b><div class="small">${esc(x.desc||'')}</div></div>`).join(''):'<p class="small">No hay mantenimientos programados para hoy.</p>'}</div>
- <div class="card"><h3>🌴 Palmeras</h3>${palmItems.length?palmItems.map(x=>`<div class="item"><b>${esc(x.client||'')}</b><div class="small">${esc(x.address||'')}</div></div>`).join(''):'<p class="small">No hay tratamientos previstos para hoy.</p>'}</div>`;
-}
 /* ===== NOTAS PERSONALES ===== */
 function notesData(){return S.get('notes',[])}
 function notesPage(){
@@ -725,7 +715,7 @@ function workerPortal(){
  <p class=small>Fichajes, horas del equipo, incidencias, fotos y control económico. Las tarifas y costes solo se muestran aquí, nunca en el portal del trabajador.</p>
  <div class=actions><button class="btn primary" onclick="loadAdminClockings()">↻ Actualizar</button><button class=btn onclick="window.open('./trabajador.html','_blank')">📲 Abrir portal trabajador</button></div><div class=small style="margin-top:8px"><b>Lectura directa Supabase · V18 PALMERAS</b></div></div>
  <div id=adminClockings><div class=card>Cargando…</div></div>`;
- loadAdminClockings();
+ loadAdminClockings();startAdminClockingsAutoRefresh();
 }
 function adminClockDuration(a,b){
  if(!a)return '—';if(!b)return 'En curso';
@@ -759,7 +749,6 @@ let adminClockingsLoadSeq=0;
 async function loadAdminClockings(){
  const seq=++adminClockingsLoadSeq;
  const box=document.getElementById('adminClockings');if(!box)return;
- const previousScrollY=window.scrollY;
  box.innerHTML='<div class=card>Cargando fichajes e incidencias…</div>';
  try{
   const freshUntil=encodeURIComponent(new Date(Date.now()+86400000).toISOString());
@@ -799,11 +788,13 @@ async function loadAdminClockings(){
    ${gi.length?`<h3 style="margin-top:16px">📝 Partes, incidencias y fotos</h3>${gi.map(r=>`<div class=item><b>👷 ${esc(wn(r.worker_id))} · ${esc(r.result||'Parte')}</b><div class=small>${new Date(r.created_at||r.date).toLocaleString('es-ES')}<br>${esc(r.notes||'')}</div>${incidentPhotosHtml(r.photos)}</div>`).join('')}`:''}
    </div>`;
   }).join('');
-  window.scrollTo(0,previousScrollY);
  }catch(e){box.innerHTML=`<div class=card><b>No se pudieron cargar los datos.</b><div class=small>${esc(e.message)}</div></div>`}
 }
 let adminClockingsTimer=null;
-function startAdminClockingsAutoRefresh(){ /* Actualización manual mediante botón */ }
+function startAdminClockingsAutoRefresh(){
+ if(adminClockingsTimer)clearInterval(adminClockingsTimer);
+ adminClockingsTimer=setInterval(()=>{if(page==='Portal trabajador'&&document.getElementById('adminClockings'))loadAdminClockings();else{clearInterval(adminClockingsTimer);adminClockingsTimer=null}},10000);
+}
 function filterWorkerJobs(){let q=(psearch.value||'').toLowerCase();[...pjob.options].forEach((o,i)=>{if(i)o.hidden=q&&!String(o.dataset.search||'').includes(q)})}
 function selectedWorkerJob(){let id=pjob.value;return workerJobs().find(j=>j.id===id)}
 function showJobTeam(){
